@@ -1,0 +1,82 @@
+.step-container {
+  width: 100%;
+}
+
+.step-container h2 {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  color: var(--text-dark);
+}
+
+.divider {
+  text-align: center;
+  margin: 1.5rem 0;
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+.file-upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--primary-color);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  background-color: rgba(59, 130, 246, 0.05);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-upload:hover {
+  border-color: var(--primary-dark);
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.file-upload input {
+  display: none;
+}
+
+.file-label {
+  cursor: pointer;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.preview-box {
+  background-color: var(--background);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.preview-box h4 {
+  margin-bottom: 0.5rem;
+  color: var(--text-dark);
+}
+
+.preview-box p {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.button-group .btn {
+  flex: 1;
+}
+
+.button-group .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
