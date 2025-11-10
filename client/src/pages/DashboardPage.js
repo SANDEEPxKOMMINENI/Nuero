@@ -7,6 +7,7 @@ function DashboardPage() {
   const { user } = useAuthStore();
 
   const getLimitColor = () => {
+    if (!user) return 'text-muted';
     if (user.role === 'admin') return 'text-muted';
     const usage = user.tailoringsUsed / user.tailoringsLimit;
     if (usage >= 1) return 'danger';
