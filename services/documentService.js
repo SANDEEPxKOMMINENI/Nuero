@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
+import resumeTemplateService from './resumeTemplateService.js';
 
 class DocumentService {
   constructor() {
@@ -19,7 +20,173 @@ class DocumentService {
   }
 
   /**
-   * Generate PDF from resume text
+   * Get available resume templates
+   */
+  getAvailableTemplates() {
+    return resumeTemplateService.getAvailableTemplates();
+  }
+
+  /**
+   * Generate PDF from resume data with template
+   */
+  async generatePDFWithTemplate(resumeData, fileName, templateId = 'modern') {
+    return new Promise((resolve, reject) => {
+      try {
+        const filePath = path.join(
+          this.generatedDir,
+          `${fileName}.pdf`
+        );
+        
+        const template = resumeTemplateService.getTemplate(templateId);
+        const formattedText = resumeTemplateService.formatResumeText(resumeData, templateId);
+        
+        const doc = new PDFDocument({
+          size: 'Letter',
+          margin: template.format.margins * 72, // Convert inches to points
+          bufferPages: true,
+        });
+
+        const stream = fs.createWriteStream(filePath);
+        doc.pipe(stream);
+
+        // Set font based on template
+        try {
+          if (template.format.font === 'Times New Roman') {
+            doc.font('Times-Roman');
+          } else if (template.format.font === 'Georgia') {
+            doc.font('Georgia');
+          } else if (template.format.font === 'Consolas') {
+            doc.font('Courier'); // Fallback for monospace
+          } else {
+            doc.font('Helvetica');
+          }
+        } catch (fontError) {
+          doc.font('Helvetica'); // Fallback font
+        }
+
+        // Parse formatted resume text and apply template styling
+        const lines = formattedText.split('\n');
+        let currentY = doc.y;
+        const pageHeight = doc.page.height - 100; // Account for margins
+        const footerDistance = 50;
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          
+          if (currentY > pageHeight - footerDistance) {
+            doc.addPage();
+            currentY = doc.y;
+          }
+
+          if (!trimmedLine) {
+            currentY += 5;
+            continue;
+          }
+
+          // Section headers (in brackets)
+          if (trimmedLine.match(/^\[.*\]$/)) {
+            const headerText = trimmedLine.replace(/\[|\]/g, '');
+            
+            // Apply template-specific header styling
+            if (templateId === 'executive') {
+              doc.fontSize(13).font('Helvetica-Bold').text(headerText.toUpperCase(), {
+                width: doc.page.width - (template.format.margins * 72 * 2),
+                align: 'left'
+              });
+            } else if (templateId === 'classic') {
+              doc.fontSize(12).font('Helvetica-Bold').text(headerText, {
+                width: doc.page.width - (template.format.margins * 72 * 2),
+                align: 'left',
+                underline: true
+              });
+            } else if (templateId === 'creative') {
+              doc.fontSize(12).font('Helvetica-Bold').text(headerText, {
+                width: doc.page.width - (template.format.margins * 72 * 2),
+                align: 'left'
+              });
+              // Add underline for creative template
+              const headerWidth = doc.widthOfString(headerText);
+              doc.moveTo(doc.x, doc.y + 2)
+                 .lineTo(doc.x + headerWidth, doc.y + 2)
+                 .lineWidth(1)
+                 .stroke();
+              currentY += 5;
+            } else {
+              doc.fontSize(12).font('Helvetica-Bold').text(headerText, {
+                width: doc.page.width - (template.format.margins * 72 * 2),
+                align: 'left'
+              });
+            }
+            currentY += template.format.sectionSpacing;
+          } 
+          // Contact information (name line)
+          else if (lines.indexOf(line) === 0 && trimmedLine === trimmedLine.toUpperCase()) {
+            doc.fontSize(16).font('Helvetica-Bold').text(trimmedLine, {
+              width: doc.page.width - (template.format.margins * 72 * 2),
+              align: 'center'
+            });
+            currentY += 15;
+          }
+          // Contact details line
+          else if (trimmedLine.includes('@') || trimmedLine.includes('|') || trimmedLine.includes('linkedin.com')) {
+            doc.fontSize(9).font('Helvetica').text(trimmedLine, {
+              width: doc.page.width - (template.format.margins * 72 * 2),
+              align: 'center'
+            });
+            currentY += 8;
+          }
+          // Company names (usually in caps or bold)
+          else if (trimmedLine === trimmedLine.toUpperCase() && trimmedLine.length < 50) {
+            doc.fontSize(template.format.fontSize).font('Helvetica-Bold').text(trimmedLine, {
+              width: doc.page.width - (template.format.margins * 72 * 2),
+            });
+            currentY += 10;
+          }
+          // Bullet points
+          else if (trimmedLine.startsWith('•')) {
+            const bulletText = trimmedLine.replace(/^•\s*/, '');
+            doc.fontSize(template.format.fontSize).font('Helvetica').text(`• ${bulletText}`, {
+              width: doc.page.width - (template.format.margins * 72 * 2),
+              indent: 10
+            });
+            currentY += 10;
+          }
+          // Regular text
+          else {
+            doc.fontSize(template.format.fontSize).font('Helvetica').text(trimmedLine, {
+              width: doc.page.width - (template.format.margins * 72 * 2),
+            });
+            currentY += 10;
+          }
+        }
+
+        doc.end();
+
+        stream.on('finish', () => {
+          resolve({
+            filePath,
+            fileName: `${fileName}.pdf`,
+            url: `/downloads/${fileName}.pdf`,
+            template: templateId
+          });
+        });
+
+        stream.on('error', reject);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Generate HTML preview with template
+   */
+  generateHTMLPreview(resumeData, templateId = 'modern') {
+    return resumeTemplateService.generateHTMLPreview(resumeData, templateId);
+  }
+
+  /**
+   * Generate PDF from resume text (legacy method)
    */
   async generatePDF(resumeText, fileName) {
     return new Promise((resolve, reject) => {

@@ -16,6 +16,47 @@ class PDFParser {
   }
 
   /**
+   * Extract hyperlinks from PDF text
+   */
+  extractHyperlinks(text) {
+    if (!text || typeof text !== 'string') {
+      return [];
+    }
+
+    const hyperlinks = [];
+    
+    // HTTP/HTTPS URLs
+    const httpUrls = text.match(/https?:\/\/[^\s\)]+/g) || [];
+    hyperlinks.push(...httpUrls);
+    
+    // LinkedIn URLs
+    const linkedinUrls = text.match(/linkedin\.com\/in\/[^\s\)]+/g) || [];
+    hyperlinks.push(...linkedinUrls);
+    
+    // GitHub URLs
+    const githubUrls = text.match(/github\.com\/[^\s\)]+/g) || [];
+    hyperlinks.push(...githubUrls);
+    
+    // Portfolio URLs (common patterns)
+    const portfolioUrls = text.match(/([a-zA-Z0-9-]+\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(\/[^\s\)]+)?/g) || [];
+    hyperlinks.push(...portfolioUrls.filter(url => 
+      !url.includes('linkedin.com') && 
+      !url.includes('github.com') && 
+      !url.startsWith('http') &&
+      url.length > 10
+    ));
+    
+    // Remove duplicates and filter valid URLs
+    const uniqueLinks = [...new Set(hyperlinks)].filter(link => 
+      link && 
+      link.length > 5 && 
+      (link.startsWith('http') || link.includes('.') || link.includes('/'))
+    );
+    
+    return uniqueLinks;
+  }
+
+  /**
    * Parse structured resume data from PDF text
    */
   async parseResumeFromPDF(filePath) {
@@ -87,7 +128,8 @@ class PDFParser {
       email: '',
       phone: '',
       location: '',
-      linkedin: ''
+      linkedin: '',
+      hyperlinks: []
     };
 
     // Check if lines is valid
@@ -135,6 +177,10 @@ class PDFParser {
         }
       }
     }
+
+    // Extract hyperlinks from all contact lines
+    const allContactText = contactLines.join(' ');
+    contactInfo.hyperlinks = this.extractHyperlinks(allContactText);
 
     return contactInfo;
   }
