@@ -21,6 +21,12 @@ class PDFParser {
   async parseResumeFromPDF(filePath) {
     try {
       const text = await this.extractTextFromPDF(filePath);
+      
+      // Check if text is valid
+      if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        throw new Error('PDF contains no readable text or is corrupted');
+      }
+      
       return this.extractResumeStructure(text);
     } catch (error) {
       throw new Error(`Failed to parse resume from PDF: ${error.message}`);
@@ -31,7 +37,33 @@ class PDFParser {
    * Extract structured resume data from text
    */
   extractResumeStructure(text) {
+    // Check if text is valid
+    if (!text || typeof text !== 'string') {
+      return {
+        contactInfo: { name: '', email: '', phone: '', location: '', linkedin: '' },
+        professionalSummary: '',
+        workExperience: [],
+        education: [],
+        skills: { technical: [], tools: [], soft: [], languages: [] },
+        certifications: [],
+        projects: []
+      };
+    }
+
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    // Check if we have any lines after processing
+    if (!lines || lines.length === 0) {
+      return {
+        contactInfo: { name: '', email: '', phone: '', location: '', linkedin: '' },
+        professionalSummary: '',
+        workExperience: [],
+        education: [],
+        skills: { technical: [], tools: [], soft: [], languages: [] },
+        certifications: [],
+        projects: []
+      };
+    }
     
     const resume = {
       contactInfo: this.extractContactInfo(lines),
@@ -58,25 +90,35 @@ class PDFParser {
       linkedin: ''
     };
 
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return contactInfo;
+    }
+
     // Usually the first few lines contain contact info
     const contactLines = lines.slice(0, 5);
     
     for (const line of contactLines) {
+      // Check if line is valid
+      if (!line || typeof line !== 'string') {
+        continue;
+      }
+
       // Email extraction
       const emailMatch = line.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-      if (emailMatch && !contactInfo.email) {
+      if (emailMatch && emailMatch[0] && !contactInfo.email) {
         contactInfo.email = emailMatch[0];
       }
 
       // Phone extraction
       const phoneMatch = line.match(/(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/);
-      if (phoneMatch && !contactInfo.phone) {
+      if (phoneMatch && phoneMatch[0] && !contactInfo.phone) {
         contactInfo.phone = phoneMatch[0];
       }
 
       // LinkedIn extraction
       const linkedinMatch = line.match(/linkedin\.com\/in\/[\w-]+/i);
-      if (linkedinMatch && !contactInfo.linkedin) {
+      if (linkedinMatch && linkedinMatch[0] && !contactInfo.linkedin) {
         contactInfo.linkedin = linkedinMatch[0];
       }
 
@@ -88,7 +130,7 @@ class PDFParser {
       // Location extraction
       if (!contactInfo.location && line.includes(',') && !emailMatch && !phoneMatch && !linkedinMatch) {
         const possibleLocation = line.match(/([A-Za-z\s]+,\s*[A-Za-z\s]+)/);
-        if (possibleLocation) {
+        if (possibleLocation && possibleLocation[1]) {
           contactInfo.location = possibleLocation[1];
         }
       }
@@ -101,12 +143,22 @@ class PDFParser {
    * Extract professional summary
    */
   extractProfessionalSummary(lines) {
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return '';
+    }
+
     const summaryKeywords = ['summary', 'objective', 'profile', 'about', 'overview'];
     let summary = '';
     let summaryStarted = false;
     let summaryEnded = false;
 
     for (let i = 0; i < lines.length; i++) {
+      // Check if current line is valid
+      if (!lines[i] || typeof lines[i] !== 'string') {
+        continue;
+      }
+
       const line = lines[i].toLowerCase();
       
       if (summaryKeywords.some(keyword => line.includes(keyword)) && !summaryStarted) {
@@ -134,6 +186,11 @@ class PDFParser {
    * Extract work experience
    */
   extractWorkExperience(lines) {
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return [];
+    }
+
     const experiences = [];
     let currentExperience = null;
     let inExperienceSection = false;
@@ -141,6 +198,11 @@ class PDFParser {
     const experienceKeywords = ['experience', 'work', 'employment', 'career', 'professional'];
 
     for (let i = 0; i < lines.length; i++) {
+      // Check if current line is valid
+      if (!lines[i] || typeof lines[i] !== 'string') {
+        continue;
+      }
+
       const line = lines[i].toLowerCase();
       
       // Check if we're entering experience section
@@ -184,33 +246,33 @@ class PDFParser {
           const dateLine = lines[i];
           const dates = this.extractDates(dateLine);
           if (dates) {
-            currentExperience.startDate = dates.start;
-            currentExperience.endDate = dates.end;
+            currentExperience.startDate = dates.start || '';
+            currentExperience.endDate = dates.end || '';
           }
 
           // Extract company and position from the line
-          const nonDateParts = lines[i].replace(dateMatch[0], '').trim();
+          const nonDateParts = lines[i].replace(dateMatch ? dateMatch[0] : '', '').trim();
           if (nonDateParts) {
             // Usually format is "Position at Company" or "Company - Position"
             if (nonDateParts.toLowerCase().includes(' at ')) {
               const [position, company] = nonDateParts.split(' at ');
-              currentExperience.position = position.trim();
-              currentExperience.company = company.trim();
+              if (position) currentExperience.position = position.trim();
+              if (company) currentExperience.company = company.trim();
             } else if (nonDateParts.includes(' – ') || nonDateParts.includes(' - ')) {
               const [company, position] = nonDateParts.split(/[\–\-\s]+/);
-              currentExperience.company = company.trim();
-              currentExperience.position = position.trim();
+              if (company) currentExperience.company = company.trim();
+              if (position) currentExperience.position = position.trim();
             } else {
               currentExperience.company = nonDateParts;
             }
           }
-        } else if (currentExperience && lines[i].startsWith('•') || 
+        } else if (currentExperience && (lines[i].startsWith('•') || 
                    lines[i].startsWith('-') || 
                    lines[i].startsWith('*') ||
-                   lines[i].match(/^\d+\./)) {
+                   lines[i].match(/^\d+\./))) {
           // Bullet point
           const bullet = lines[i].replace(/^[•\-\*\d\.]\s*/, '');
-          if (bullet.length > 5) {
+          if (bullet && bullet.length > 5) {
             currentExperience.bullets.push(bullet);
           }
         } else if (currentExperience && lines[i].length > 20 && !this.isSectionHeader(lines[i])) {
@@ -232,6 +294,11 @@ class PDFParser {
    * Extract education information
    */
   extractEducation(lines) {
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return [];
+    }
+
     const education = [];
     let inEducationSection = false;
     let currentEducation = null;
@@ -239,6 +306,11 @@ class PDFParser {
     const educationKeywords = ['education', 'academic', 'university', 'college', 'degree'];
 
     for (let i = 0; i < lines.length; i++) {
+      // Check if current line is valid
+      if (!lines[i] || typeof lines[i] !== 'string') {
+        continue;
+      }
+
       const line = lines[i].toLowerCase();
       
       if (educationKeywords.some(keyword => line.includes(keyword))) {
@@ -277,13 +349,13 @@ class PDFParser {
 
           // Extract year
           const yearMatch = lines[i].match(/\b(19|20)\d{2}\b/);
-          if (yearMatch) {
+          if (yearMatch && yearMatch[0]) {
             currentEducation.year = yearMatch[0];
           }
 
           // Extract GPA
           const gpaMatch = lines[i].match(/gpa[:\s]*([0-9]\.[0-9]+)/i);
-          if (gpaMatch) {
+          if (gpaMatch && gpaMatch[1]) {
             currentEducation.gpa = gpaMatch[1];
           }
 
@@ -317,6 +389,16 @@ class PDFParser {
    * Extract skills section
    */
   extractSkills(lines) {
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return {
+        technical: [],
+        tools: [],
+        soft: [],
+        languages: []
+      };
+    }
+
     const skills = {
       technical: [],
       tools: [],
@@ -328,6 +410,11 @@ class PDFParser {
     const skillsKeywords = ['skills', 'technical', 'technologies', 'competencies', 'abilities'];
 
     for (let i = 0; i < lines.length; i++) {
+      // Check if current line is valid
+      if (!lines[i] || typeof lines[i] !== 'string') {
+        continue;
+      }
+
       const line = lines[i].toLowerCase();
       
       if (skillsKeywords.some(keyword => line.includes(keyword))) {
@@ -366,11 +453,21 @@ class PDFParser {
    * Extract certifications
    */
   extractCertifications(lines) {
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return [];
+    }
+
     const certifications = [];
     let inCertSection = false;
     const certKeywords = ['certification', 'certificate', 'licensed', 'credential'];
 
     for (let i = 0; i < lines.length; i++) {
+      // Check if current line is valid
+      if (!lines[i] || typeof lines[i] !== 'string') {
+        continue;
+      }
+
       const line = lines[i].toLowerCase();
       
       if (certKeywords.some(keyword => line.includes(keyword))) {
@@ -400,12 +497,22 @@ class PDFParser {
    * Extract projects
    */
   extractProjects(lines) {
+    // Check if lines is valid
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return [];
+    }
+
     const projects = [];
     let inProjectsSection = false;
     let currentProject = null;
     const projectKeywords = ['project', 'portfolio', 'work'];
 
     for (let i = 0; i < lines.length; i++) {
+      // Check if current line is valid
+      if (!lines[i] || typeof lines[i] !== 'string') {
+        continue;
+      }
+
       const line = lines[i].toLowerCase();
       
       if (projectKeywords.some(keyword => line.includes(keyword))) {
@@ -436,9 +543,9 @@ class PDFParser {
           };
         } else if (currentProject && (lines[i].startsWith('•') || lines[i].startsWith('-'))) {
           const bullet = lines[i].replace(/^[•\-\*]\s*/, '');
-          if (this.isTechnicalSkill(bullet)) {
+          if (bullet && this.isTechnicalSkill(bullet)) {
             currentProject.technologies.push(bullet);
-          } else {
+          } else if (bullet) {
             currentProject.description += (currentProject.description ? ' ' : '') + bullet;
           }
         }
@@ -456,6 +563,11 @@ class PDFParser {
    * Helper methods
    */
   isSectionHeader(line) {
+    // Check if line is valid
+    if (!line || typeof line !== 'string') {
+      return false;
+    }
+
     const sectionHeaders = [
       'experience', 'education', 'skills', 'projects', 'certifications',
       'summary', 'objective', 'profile', 'contact', 'references'
@@ -465,6 +577,11 @@ class PDFParser {
   }
 
   extractDates(text) {
+    // Check if text is valid
+    if (!text || typeof text !== 'string') {
+      return null;
+    }
+
     // Match various date formats
     const datePatterns = [
       /(\d{1,2}\/\d{4})\s*[–\-–]\s*(\d{1,2}\/\d{4})/,  // MM/YYYY - MM/YYYY
@@ -475,7 +592,7 @@ class PDFParser {
 
     for (const pattern of datePatterns) {
       const match = text.match(pattern);
-      if (match) {
+      if (match && match[1]) {
         return {
           start: match[1],
           end: match[2] || ''
@@ -487,6 +604,11 @@ class PDFParser {
   }
 
   isTechnicalSkill(skill) {
+    // Check if skill is valid
+    if (!skill || typeof skill !== 'string') {
+      return false;
+    }
+
     const techKeywords = [
       'javascript', 'python', 'java', 'react', 'node', 'angular', 'vue', 'docker',
       'aws', 'azure', 'sql', 'nosql', 'mongodb', 'postgresql', 'mysql', 'git',
@@ -498,6 +620,11 @@ class PDFParser {
   }
 
   isTool(skill) {
+    // Check if skill is valid
+    if (!skill || typeof skill !== 'string') {
+      return false;
+    }
+
     const toolKeywords = [
       'excel', 'powerpoint', 'word', 'slack', 'jira', 'trello', 'figma', 'photoshop',
       'illustrator', 'sketch', 'tableau', 'power bi', 'salesforce', 'hubspot'
@@ -506,6 +633,11 @@ class PDFParser {
   }
 
   isLanguage(skill) {
+    // Check if skill is valid
+    if (!skill || typeof skill !== 'string') {
+      return false;
+    }
+
     const langKeywords = [
       'english', 'spanish', 'french', 'german', 'chinese', 'japanese', 'korean',
       'portuguese', 'russian', 'arabic', 'hindi'

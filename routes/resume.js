@@ -8,6 +8,7 @@ import User from '../models/User.js';
 import AuditLog from '../models/AuditLog.js';
 import resumeTailorService from '../services/resumeTailorService.js';
 import documentService from '../services/documentService.js';
+import llmService from '../services/llmService.js';
 
 const router = express.Router();
 
@@ -37,6 +38,20 @@ const upload = multer({
       cb(new Error('Invalid file type'));
     }
   },
+});
+
+/**
+ * Get available LLM models
+ */
+router.get('/models', authenticateToken, async (req, res) => {
+  try {
+    const models = llmService.getAvailableModels();
+    res.json({
+      models,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /**

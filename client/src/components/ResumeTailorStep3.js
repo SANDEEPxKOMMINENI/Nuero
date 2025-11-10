@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
 
 function ResumeTailorStep3({
   formData,
@@ -7,6 +9,36 @@ function ResumeTailorStep3({
   onTailor,
   loading,
 }) {
+  const { token } = useAuthStore();
+  const [availableModels, setAvailableModels] = useState(null);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState('');
+
+  // Fetch available models on component mount
+  useEffect(() => {
+    const fetchModels = async () => {
+      if (!token) return;
+      
+      setModelsLoading(true);
+      setModelsError('');
+      
+      try {
+        const response = await axios.get('http://localhost:5000/api/resume/models', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        setAvailableModels(response.data.models);
+      } catch (error) {
+        console.error('Failed to fetch models:', error);
+        setModelsError('Failed to load available models');
+      } finally {
+        setModelsLoading(false);
+      }
+    };
+
+    fetchModels();
+  }, [token]);
+
   const templates = [
     {
       id: 'modern',
@@ -30,13 +62,36 @@ function ResumeTailorStep3({
     },
   ];
 
-  const llms = [
+  // Fallback LLMs if API call fails
+  const fallbackLLMs = [
     { id: 'gpt4', name: 'GPT-4', description: 'Most advanced, best for complex tasks' },
     { id: 'claude', name: 'Claude', description: 'Balanced performance and safety' },
     { id: 'gemini', name: 'Gemini', description: 'Good performance, multimodal' },
     { id: 'mixtral', name: 'Mixtral', description: 'Open-source, cost-effective' },
     { id: 'llama2', name: 'Llama 2', description: 'Meta open-source model' },
   ];
+
+  // Get available LLMs from API or use fallback
+  const getAvailableLLMs = () => {
+    if (availableModels) {
+      // Flatten all models from all providers
+      const allModels = [];
+      Object.entries(availableModels).forEach(([provider, models]) => {
+        models.forEach(model => {
+          allModels.push({
+            id: model.id,
+            name: model.name,
+            description: `${model.provider} - ${model.name}`,
+            provider: model.provider
+          });
+        });
+      });
+      return allModels;
+    }
+    return fallbackLLMs;
+  };
+
+  const llms = getAvailableLLMs();
 
   return (
     <div className="step-container">
@@ -64,22 +119,36 @@ function ResumeTailorStep3({
 
       <div className="form-group">
         <label className="form-label">AI Model (with auto-fallback)</label>
-        <div className="llm-grid">
-          {llms.map((llm) => (
-            <div
-              key={llm.id}
-              className={`llm-option ${
-                formData.llmType === llm.id ? 'active' : ''
-              }`}
-              onClick={() =>
-                setFormData({ ...formData, llmType: llm.id })
-              }
-            >
-              <div className="llm-name">{llm.name}</div>
-              <div className="llm-description">{llm.description}</div>
-            </div>
-          ))}
-        </div>
+        
+        {modelsLoading && (
+          <div className="loading-message">Loading available models...</div>
+        )}
+        
+        {modelsError && (
+          <div className="error-message">{modelsError}</div>
+        )}
+        
+        {!modelsLoading && !modelsError && (
+          <div className="llm-grid">
+            {llms.map((llm) => (
+              <div
+                key={llm.id}
+                className={`llm-option ${
+                  formData.llmType === llm.id ? 'active' : ''
+                }`}
+                onClick={() =>
+                  setFormData({ ...formData, llmType: llm.id })
+                }
+              >
+                <div className="llm-name">{llm.name}</div>
+                <div className="llm-description">{llm.description}</div>
+                {llm.provider && (
+                  <div className="llm-provider">{llm.provider}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="info-box">
