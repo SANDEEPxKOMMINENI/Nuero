@@ -6,7 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: '.env' });
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -48,7 +48,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-// MongoDB connection
+// Start server first, then connect to MongoDB
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+// MongoDB connection (non-blocking)
 mongoose
   .connect(MONGODB_URI, {
     useNewUrlParser: true,
@@ -56,14 +61,10 @@ mongoose
   })
   .then(() => {
     console.log('Connected to MongoDB');
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);
-    process.exit(1);
+    console.log('Server running without MongoDB connection');
   });
 
 export default app;

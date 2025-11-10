@@ -1,9 +1,14 @@
 :root {
   --primary-color: #3b82f6;
   --primary-dark: #2563eb;
+  --primary-light: #dbeafe;
   --secondary-color: #10b981;
   --danger-color: #ef4444;
+  --error-color: #ef4444;
+  --error-light: #fef2f2;
   --warning-color: #f59e0b;
+  --info-color: #3b82f6;
+  --info-light: #dbeafe;
   --text-dark: #1f2937;
   --text-light: #6b7280;
   --background: #f9fafb;
