@@ -3,27 +3,27 @@ import axios from 'axios';
 const LLM_CONFIGS = {
   gpt4: {
     provider: 'openrouter',
-    model: 'openai/gpt-4-turbo-preview',
+    model: 'meta-llama/llama-3.3-70b-instruct:free',
     maxTokens: 2000,
   },
   gemini: {
     provider: 'gemini',
-    model: 'gemini-pro',
+    model: 'gemini-2.5-flash',
     maxTokens: 2000,
   },
   claude: {
-    provider: 'anthropic',
-    model: 'claude-3-opus-20240229',
+    provider: 'openrouter',
+    model: 'mistralai/mistral-small-3.2-24b-instruct:free',
     maxTokens: 2000,
   },
   mixtral: {
     provider: 'openrouter',
-    model: 'mistralai/mixtral-8x7b-instruct',
+    model: 'deepseek/deepseek-chat-v3.1:free',
     maxTokens: 2000,
   },
   llama2: {
     provider: 'openrouter',
-    model: 'meta-llama/llama-2-70b-chat',
+    model: 'openrouter/polaris-alpha',
     maxTokens: 2000,
   },
 };
@@ -31,24 +31,33 @@ const LLM_CONFIGS = {
 // Extended model configurations for model picker
 const ALL_LLM_MODELS = {
   openrouter: [
-    { id: 'openai/gpt-4-turbo-preview', name: 'GPT-4 Turbo', provider: 'OpenRouter' },
-    { id: 'openai/gpt-4', name: 'GPT-4', provider: 'OpenRouter' },
-    { id: 'anthropic/claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'OpenRouter' },
-    { id: 'anthropic/claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', provider: 'OpenRouter' },
-    { id: 'google/gemini-pro', name: 'Gemini Pro', provider: 'OpenRouter' },
-    { id: 'meta-llama/llama-3-70b-instruct', name: 'Llama 3 70B', provider: 'OpenRouter' },
-    { id: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', provider: 'OpenRouter' },
-    { id: 'meta-llama/llama-2-70b-chat', name: 'Llama 2 70B', provider: 'OpenRouter' },
+    { id: 'kwaipilot/kat-coder-pro:free', name: 'Kwaipilot: Kat Coder Pro (Free)', provider: 'OpenRouter' },
+    { id: 'openrouter/polaris-alpha', name: 'Polaris Alpha (Free)', provider: 'OpenRouter' },
+    { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'NVIDIA: Nemotron Nano 12B V2 VL (Free)', provider: 'OpenRouter' },
+    { id: 'minimax/minimax-m2:free', name: 'MiniMax: MiniMax M2 (Free)', provider: 'OpenRouter' },
+    { id: 'alibaba/tongyi-deepresearch-30b-a3b:free', name: 'Tongyi DeepResearch 30B A3B (Free)', provider: 'OpenRouter' },
+    { id: 'meituan/longcat-flash-chat:free', name: 'Meituan: LongCat Flash Chat (Free)', provider: 'OpenRouter' },
+    { id: 'deepseek/deepseek-chat-v3.1:free', name: 'DeepSeek: DeepSeek V3.1 (Free)', provider: 'OpenRouter' },
+    { id: 'openai/gpt-oss-20b:free', name: 'OpenAI: GPT OSS 20B (Free)', provider: 'OpenRouter' },
+    { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Meta: Llama 3.3 70B Instruct (Free)', provider: 'OpenRouter' },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral: Mistral Small 3.2 24B (Free)', provider: 'OpenRouter' },
+    { id: 'meta-llama/llama-3.3-8b-instruct:free', name: 'Meta: Llama 3.3 8B Instruct (Free)', provider: 'OpenRouter' },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Google: Gemini 2.0 Flash Experimental (Free)', provider: 'OpenRouter' },
+    { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek: DeepSeek R1 (Free)', provider: 'OpenRouter' },
+    { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'Qwen2.5 72B Instruct (Free)', provider: 'OpenRouter' },
+    { id: 'nousresearch/hermes-3-llama-3.1-405b:free', name: 'Nous: Hermes 3 405B Instruct (Free)', provider: 'OpenRouter' },
+    { id: 'mistralai/mistral-nemo:free', name: 'Mistral: Mistral Nemo (Free)', provider: 'OpenRouter' },
   ],
   gemini: [
-    { id: 'gemini-pro', name: 'Gemini Pro', provider: 'Google' },
-    { id: 'gemini-pro-vision', name: 'Gemini Pro Vision', provider: 'Google' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'Google' },
+    { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', provider: 'Google' },
+    { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite Latest', provider: 'Google' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google' },
+    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'Google' },
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'Google' },
+    { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', provider: 'Google' },
   ],
-  anthropic: [
-    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'Anthropic' },
-    { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', provider: 'Anthropic' },
-    { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'Anthropic' },
-  ],
+  anthropic: [],
 };
 
 class LLMService {
@@ -62,14 +71,11 @@ class LLMService {
     
     this.openRouterKey = process.env.OPENROUTER_API_KEY;
     this.geminiKey = process.env.GEMINI_API_KEY;
-    this.claudeKey = process.env.ANTHROPIC_API_KEY;
     
     // Debug environment variables
     console.log('LLM Service - Environment Variables Check:');
     console.log('- OpenRouter Key exists:', !!this.openRouterKey);
     console.log('- Gemini Key exists:', !!this.geminiKey);
-    console.log('- Claude Key exists:', !!this.claudeKey);
-    console.log('- Claude Key is placeholder:', this.claudeKey === 'your-anthropic-api-key');
     
     this._keysChecked = true;
   }
@@ -134,17 +140,12 @@ class LLMService {
     if (config.provider === 'gemini' && (!this.geminiKey || this.geminiKey === 'your-gemini-api-key')) {
       throw new Error('Gemini API key is missing or not configured');
     }
-    if (config.provider === 'anthropic' && (!this.claudeKey || this.claudeKey === 'your-anthropic-api-key')) {
-      throw new Error('Anthropic API key is missing or not configured');
-    }
 
     switch (config.provider) {
       case 'openrouter':
         return this.callOpenRouter(config, prompt);
       case 'gemini':
         return this.callGemini(config, prompt);
-      case 'anthropic':
-        return this.callClaude(config, prompt);
       default:
         throw new Error(`Unknown provider: ${config.provider}`);
     }
@@ -281,67 +282,6 @@ class LLMService {
         throw new Error('Gemini rate limit exceeded. Please try again later.');
       } else {
         throw new Error(`Gemini API error: ${error.message}`);
-      }
-    }
-  }
-
-  async callClaude(config, prompt) {
-    try {
-      console.log(`Calling Claude with model: ${config.model}`);
-      
-      const requestData = {
-        model: config.model,
-        max_tokens: config.maxTokens,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      };
-
-      const response = await axios.post(
-        'https://api.anthropic.com/v1/messages',
-        requestData,
-        {
-          headers: {
-            'x-api-key': this.claudeKey,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000, // 30 second timeout
-        }
-      );
-
-      if (!response.data || !response.data.content || response.data.content.length === 0) {
-        throw new Error('Invalid response format from Claude');
-      }
-
-      const content = response.data.content[0]?.text;
-      if (!content) {
-        throw new Error('No content in Claude response');
-      }
-
-      return {
-        content: content,
-        tokensUsed: response.data.usage?.input_tokens || 0,
-      };
-    } catch (error) {
-      console.error('Claude API Error:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message
-      });
-      
-      if (error.response?.status === 401) {
-        throw new Error('Claude API key is invalid or expired. Please check your API key.');
-      } else if (error.response?.status === 400) {
-        throw new Error(`Claude request error: ${error.response?.data?.error?.message || 'Invalid request'}`);
-      } else if (error.response?.status === 429) {
-        throw new Error('Claude rate limit exceeded. Please try again later.');
-      } else {
-        throw new Error(`Claude API error: ${error.message}`);
       }
     }
   }

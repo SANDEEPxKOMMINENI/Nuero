@@ -106,20 +106,20 @@ class PDFParser {
 
       // Email extraction
       const emailMatch = line.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-      if (emailMatch && emailMatch[0] && !contactInfo.email) {
-        contactInfo.email = emailMatch[0];
+      if (emailMatch && !contactInfo.email) {
+        contactInfo.email = emailMatch[0] || '';
       }
 
       // Phone extraction
       const phoneMatch = line.match(/(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/);
-      if (phoneMatch && phoneMatch[0] && !contactInfo.phone) {
-        contactInfo.phone = phoneMatch[0];
+      if (phoneMatch && !contactInfo.phone) {
+        contactInfo.phone = phoneMatch[0] || '';
       }
 
       // LinkedIn extraction
       const linkedinMatch = line.match(/linkedin\.com\/in\/[\w-]+/i);
-      if (linkedinMatch && linkedinMatch[0] && !contactInfo.linkedin) {
-        contactInfo.linkedin = linkedinMatch[0];
+      if (linkedinMatch && !contactInfo.linkedin) {
+        contactInfo.linkedin = linkedinMatch[0] || '';
       }
 
       // Name extraction (usually first line without email/phone)
@@ -130,8 +130,8 @@ class PDFParser {
       // Location extraction
       if (!contactInfo.location && line.includes(',') && !emailMatch && !phoneMatch && !linkedinMatch) {
         const possibleLocation = line.match(/([A-Za-z\s]+,\s*[A-Za-z\s]+)/);
-        if (possibleLocation && possibleLocation[1]) {
-          contactInfo.location = possibleLocation[1];
+        if (possibleLocation && possibleLocation.length > 1) {
+          contactInfo.location = possibleLocation[1] || '';
         }
       }
     }
@@ -348,16 +348,16 @@ class PDFParser {
           };
 
           // Extract year
-          const yearMatch = lines[i].match(/\b(19|20)\d{2}\b/);
-          if (yearMatch && yearMatch[0]) {
-            currentEducation.year = yearMatch[0];
-          }
+           const yearMatch = lines[i].match(/\b(19|20)\d{2}\b/);
+           if (yearMatch && yearMatch.length > 0) {
+             currentEducation.year = yearMatch[0] || '';
+           }
 
-          // Extract GPA
-          const gpaMatch = lines[i].match(/gpa[:\s]*([0-9]\.[0-9]+)/i);
-          if (gpaMatch && gpaMatch[1]) {
-            currentEducation.gpa = gpaMatch[1];
-          }
+           // Extract GPA
+           const gpaMatch = lines[i].match(/gpa[:\s]*([0-9]\.[0-9]+)/i);
+           if (gpaMatch && gpaMatch.length > 1) {
+             currentEducation.gpa = gpaMatch[1] || '';
+           }
 
           // Extract school name
           const schoolPattern = /(university|college|institute|school of|academy)/i;
