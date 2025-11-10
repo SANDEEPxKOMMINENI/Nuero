@@ -11,6 +11,11 @@ const LLM_CONFIGS = {
     model: 'gemini-2.5-flash',
     maxTokens: 2000,
   },
+  gemini2: {
+    provider: 'gemini',
+    model: 'gemini-2.0-flash',
+    maxTokens: 2000,
+  },
   claude: {
     provider: 'openrouter',
     model: 'mistralai/mistral-small-3.2-24b-instruct:free',

@@ -11,56 +11,78 @@ function ResumeTailorStep3({
 }) {
   const { token } = useAuthStore();
   const [availableModels, setAvailableModels] = useState(null);
+  const [availableTemplates, setAvailableTemplates] = useState(null);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState('');
 
-  // Fetch available models on component mount
+  // Fetch available models and templates on component mount
   useEffect(() => {
-    const fetchModels = async () => {
+    const fetchData = async () => {
       if (!token) return;
       
       setModelsLoading(true);
       setModelsError('');
       
       try {
-        const response = await axios.get('http://localhost:5000/api/resume/models', {
+        // Fetch models
+        const modelsResponse = await axios.get('http://localhost:5000/api/resume/models', {
           headers: { Authorization: `Bearer ${token}` },
         });
         
-        setAvailableModels(response.data.models);
+        // Fetch templates
+        const templatesResponse = await axios.get('http://localhost:5000/api/resume/templates', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        setAvailableModels(modelsResponse.data.models);
+        setAvailableTemplates(templatesResponse.data.templates);
       } catch (error) {
-        console.error('Failed to fetch models:', error);
-        setModelsError('Failed to load available models');
+        console.error('Failed to fetch data:', error);
+        setModelsError('Failed to load available models and templates');
       } finally {
         setModelsLoading(false);
       }
     };
 
-    fetchModels();
+    fetchData();
   }, [token]);
 
-  const templates = [
-    {
-      id: 'modern',
-      name: 'Modern',
-      description: 'Clean and contemporary design',
-    },
-    {
-      id: 'classic',
-      name: 'Classic',
-      description: 'Traditional and timeless',
-    },
-    {
-      id: 'minimal',
-      name: 'Minimal',
-      description: 'Simple and minimalist',
-    },
-    {
-      id: 'technical',
-      name: 'Technical',
-      description: 'Optimized for engineers',
-    },
-  ];
+  // Get available templates from API or use fallback
+  const getAvailableTemplates = () => {
+    if (availableTemplates) {
+      return availableTemplates.map(template => ({
+        id: template.id,
+        name: template.name,
+        description: template.description
+      }));
+    }
+    
+    // Fallback templates
+    return [
+      {
+        id: 'modern',
+        name: 'Modern',
+        description: 'Clean and contemporary design',
+      },
+      {
+        id: 'classic',
+        name: 'Classic',
+        description: 'Traditional and timeless',
+      },
+      {
+        id: 'minimal',
+        name: 'Minimal',
+        description: 'Simple and minimalist',
+      },
+      {
+        id: 'technical',
+        name: 'Technical',
+        description: 'Optimized for engineers',
+      },
+    ];
+  };
+
+  const templates = getAvailableTemplates();
 
   // Fallback LLMs if API call fails
   const fallbackLLMs = [

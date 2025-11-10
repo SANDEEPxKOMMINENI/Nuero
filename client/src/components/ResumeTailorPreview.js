@@ -1,8 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
 import './ResumeTailorPreview.css';
 
 function ResumeTailorPreview({ result, onDownload, onReset, loading }) {
+  const { token } = useAuthStore();
   const [showJson, setShowJson] = useState(false);
+  const [availableTemplates, setAvailableTemplates] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState(result.template || 'modern');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Fetch templates and generate preview on component mount
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      if (!token) return;
+      
+      try {
+        const response = await axios.get('http://localhost:5000/api/resume/templates', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        setAvailableTemplates(response.data.templates);
+      } catch (error) {
+        console.error('Failed to fetch templates:', error);
+      }
+    };
+
+    fetchTemplates();
+  }, [token]);
+
+  // Generate HTML preview when template changes
+  useEffect(() => {
+    const generatePreview = async () => {
+      if (!result?.id || !token) return;
+      
+      setPreviewLoading(true);
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/resume/preview/${result.id}?template=${selectedTemplate}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        
+        setPreviewHtml(response.data);
+      } catch (error) {
+        console.error('Failed to generate preview:', error);
+        setPreviewHtml('<p>Failed to generate preview</p>');
+      } finally {
+        setPreviewLoading(false);
+      }
+    };
+
+    generatePreview();
+  }, [result?.id, selectedTemplate, token]);
 
   return (
     <div className="preview-container">
@@ -15,7 +67,17 @@ function ResumeTailorPreview({ result, onDownload, onReset, loading }) {
         </div>
         <div className="info-item">
           <span className="info-label">Template:</span>
-          <span className="info-value capitalize">{result.template}</span>
+          <select 
+            className="template-selector"
+            value={selectedTemplate}
+            onChange={(e) => setSelectedTemplate(e.target.value)}
+          >
+            {availableTemplates && availableTemplates.map(template => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="info-item">
           <span className="info-label">LLM Used:</span>
@@ -34,7 +96,7 @@ function ResumeTailorPreview({ result, onDownload, onReset, loading }) {
           className={`tab-button ${!showJson ? 'active' : ''}`}
           onClick={() => setShowJson(false)}
         >
-          📄 Preview
+          📄 Template Preview
         </button>
         <button
           className={`tab-button ${showJson ? 'active' : ''}`}
@@ -46,7 +108,15 @@ function ResumeTailorPreview({ result, onDownload, onReset, loading }) {
 
       {!showJson ? (
         <div className="resume-preview">
-          <pre>{result.tailoredContent}</pre>
+          {previewLoading ? (
+            <div className="loading-preview">Generating preview...</div>
+          ) : (
+            <iframe 
+              srcDoc={previewHtml}
+              className="preview-iframe"
+              title="Resume Preview"
+            />
+          )}
         </div>
       ) : (
         <div className="resume-json">

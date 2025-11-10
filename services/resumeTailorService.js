@@ -3,6 +3,24 @@ import pdfParser from '../utils/pdfParser.js';
 import jobScraper from '../utils/jobScraper.js';
 
 class ResumeTailorService {
+  
+  /**
+   * Clean JSON response from LLM by removing markdown code blocks
+   */
+  cleanJsonResponse(content) {
+    if (!content || typeof content !== 'string') {
+      return content;
+    }
+    
+    // Remove markdown code blocks (```json ... ```)
+    let cleaned = content.replace(/```json\s*/i, '').replace(/```\s*$/, '');
+    
+    // Remove any leading/trailing whitespace
+    cleaned = cleaned.trim();
+    
+    return cleaned;
+  }
+
   /**
    * Parse resume from PDF file
    */
@@ -247,7 +265,8 @@ Return ONLY valid JSON, no other text. Be thorough and extract all relevant info
     );
 
     try {
-      return JSON.parse(response.content);
+      const cleanedContent = this.cleanJsonResponse(response.content);
+      return JSON.parse(cleanedContent);
     } catch (error) {
       console.error('Failed to parse job keywords JSON', error);
       return {
@@ -487,7 +506,8 @@ Return ONLY valid JSON, no other text.`;
     );
 
     try {
-      return JSON.parse(response.content);
+      const cleanedContent = this.cleanJsonResponse(response.content);
+      return JSON.parse(cleanedContent);
     } catch (error) {
       console.error('Failed to parse resume JSON', error);
       return null;
@@ -561,7 +581,8 @@ Return ONLY valid JSON, no other text. Focus on specific, actionable improvement
     );
 
     try {
-      return JSON.parse(response.content);
+      const cleanedContent = this.cleanJsonResponse(response.content);
+      return JSON.parse(cleanedContent);
     } catch (error) {
       console.error('Failed to parse change summary', error);
       return {

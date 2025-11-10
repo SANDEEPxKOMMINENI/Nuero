@@ -55,6 +55,20 @@ router.get('/models', authenticateToken, async (req, res) => {
 });
 
 /**
+ * Get available resume templates
+ */
+router.get('/templates', authenticateToken, async (req, res) => {
+  try {
+    const templates = documentService.getAvailableTemplates();
+    res.json({
+      templates,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Upload base resume (with improved PDF parsing)
  */
 router.post('/upload', authenticateToken, upload.single('resume'), async (req, res) => {
@@ -382,10 +396,11 @@ router.post('/generate-documents/:resumeId', authenticateToken, async (req, res)
 
     const baseFileName = `resume_${resume._id}_${Date.now()}`;
 
-    // Generate PDF
-    const pdfResult = await documentService.generatePDF(
-      resume.tailoredResumeContent,
-      baseFileName
+    // Generate PDF with template
+    const pdfResult = await documentService.generatePDFWithTemplate(
+      resume.tailoredResumeJson,
+      baseFileName,
+      resume.template || 'modern'
     );
 
     // Generate DOCX
@@ -414,6 +429,36 @@ router.post('/generate-documents/:resumeId', authenticateToken, async (req, res)
         docx: docxResult,
       },
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Generate HTML preview for resume
+ */
+router.get('/preview/:resumeId', authenticateToken, async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { template = 'modern' } = req.query;
+
+    const resume = await Resume.findById(resumeId);
+    if (!resume) {
+      return res.status(404).json({ error: 'Resume not found' });
+    }
+
+    if (resume.userId.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to access this resume' });
+    }
+
+    // Generate HTML preview
+    const htmlPreview = documentService.generateHTMLPreview(
+      resume.tailoredResumeJson,
+      template
+    );
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(htmlPreview);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
