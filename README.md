@@ -14,6 +14,9 @@ An AI-powered resume generation and tailoring system that uses LlamaIndex and mu
 - 📊 **Usage Tracking**: Tiered subscription system (Free: 3/month, Pro: 50/month, Premium: Unlimited)
 - 🔍 **Version Control**: Track all resume versions and tailoring history
 - 🗄️ **MongoDB Backend**: Persistent storage with audit logging
+- 📄 **Advanced PDF Parsing**: Extract structured data from resume PDFs with high accuracy
+- 🔗 **Job URL Scraping**: Automatically extract job details from LinkedIn, Indeed, and company career pages
+- 🧠 **Enhanced LLM Prompts**: Improved AI prompts for better resume tailoring and ATS optimization
 
 ## Tech Stack
 
@@ -23,6 +26,9 @@ An AI-powered resume generation and tailoring system that uses LlamaIndex and mu
 - **LLM Integration**: LlamaIndex + OpenRouter API
 - **Document Generation**: PDFKit, node-docx
 - **Authentication**: JWT
+- **PDF Processing**: pdf-parse for advanced PDF text extraction
+- **Web Scraping**: Cheerio + Axios for job posting scraping
+- **File Upload**: Multer with enhanced file handling
 
 ## Project Structure
 
@@ -44,6 +50,9 @@ ai-resume-tailor/
 │   ├── llmService.js
 │   ├── resumeTailorService.js
 │   └── documentService.js
+├── utils/                   # Utility functions
+│   ├── pdfParser.js         # Advanced PDF resume parsing
+│   └── jobScraper.js       # Job URL scraping functionality
 ├── middleware/              # Express middleware
 │   └── auth.js
 ├── scripts/                 # Utility scripts
@@ -141,7 +150,8 @@ The application will be available at:
 - `GET /api/auth/me` - Get current user
 
 ### Resume Operations
-- `POST /api/resume/upload` - Upload base resume
+- `POST /api/resume/upload` - Upload base resume (with enhanced PDF parsing)
+- `POST /api/resume/scrape-job-url` - Scrape job description from URL
 - `POST /api/resume/extract-job-keywords` - Extract keywords from job description
 - `POST /api/resume/analyze-gaps` - Analyze resume gaps
 - `POST /api/resume/tailor` - Generate tailored resume
@@ -163,15 +173,40 @@ The application will be available at:
 
 ### Resume Tailoring Process
 
-1. **Upload Resume** - User uploads or pastes their base resume
-2. **Enter Job Description** - User provides target job description
+1. **Upload Resume** - User uploads PDF resume or pastes text (with advanced PDF parsing)
+2. **Enter Job Details** - User provides job URL for automatic scraping OR pastes job description
 3. **Select Template & LLM** - Choose resume style and AI model
 4. **AI Processing**:
+   - Extract structured data from resume PDF
+   - Scrape job details from URL if provided
    - Extract job keywords and requirements
    - Analyze resume-job fit and identify gaps
    - Generate tailored resume with keyword integration
    - Ensure ATS compliance
 5. **Download** - Get tailored resume in Word and PDF formats
+
+### New Features
+
+#### Advanced PDF Parsing
+- Extracts structured resume data from PDF files
+- Identifies contact information, work experience, education, skills
+- Parses bullet points and achievements
+- Categorizes technical and soft skills
+- Maintains original resume structure and formatting
+
+#### Job URL Scraping
+- Supports LinkedIn, Indeed, and company career pages
+- Extracts job title, company, requirements, responsibilities
+- Identifies required skills and qualifications
+- Handles multiple URL formats and page structures
+- Provides fallback to manual text entry if scraping fails
+
+#### Enhanced LLM Prompts
+- Improved ATS optimization focus
+- Better keyword integration strategies
+- Enhanced bullet point writing with action verbs
+- Quantifiable metrics emphasis
+- Honesty verification and integrity checks
 
 ### LLM Integration
 

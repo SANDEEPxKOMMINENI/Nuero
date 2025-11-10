@@ -40,7 +40,7 @@ const upload = multer({
 });
 
 /**
- * Upload base resume
+ * Upload base resume (with improved PDF parsing)
  */
 router.post('/upload', authenticateToken, upload.single('resume'), async (req, res) => {
   try {
@@ -48,7 +48,37 @@ router.post('/upload', authenticateToken, upload.single('resume'), async (req, r
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const content = fs.readFileSync(req.file.path, 'utf-8');
+    let content = '';
+    let structuredData = null;
+    let parseSuccess = true;
+
+    // Handle different file types
+    if (req.file.mimetype === 'application/pdf') {
+      // Use advanced PDF parsing
+      const parseResult = await resumeTailorService.parseResumeFromPDF(req.file.path);
+      if (parseResult.success) {
+        content = parseResult.text;
+        structuredData = parseResult.data;
+      } else {
+        parseSuccess = false;
+        // Fallback to basic text extraction
+        try {
+          content = fs.readFileSync(req.file.path, 'utf-8');
+        } catch (pdfError) {
+          return res.status(400).json({ 
+            error: 'Failed to parse PDF file. Please ensure it\'s a valid resume PDF.',
+            details: parseResult.error 
+          });
+        }
+      }
+    } else if (req.file.mimetype === 'text/plain') {
+      content = fs.readFileSync(req.file.path, 'utf-8');
+    } else {
+      // For DOCX files, we'll need a different approach
+      return res.status(400).json({ 
+        error: 'DOCX parsing not yet supported. Please upload a PDF or text file.' 
+      });
+    }
 
     // Log the upload
     await AuditLog.create({
@@ -57,20 +87,104 @@ router.post('/upload', authenticateToken, upload.single('resume'), async (req, r
       details: {
         fileName: req.file.originalname,
         fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        parseSuccess,
+        structuredDataAvailable: !!structuredData
       },
       success: true,
     });
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
 
     res.json({
       message: 'Resume uploaded successfully',
       resume: {
         fileName: req.file.originalname,
         content,
+        structuredData,
+        fileType: req.file.mimetype,
+        parseSuccess,
         uploadedAt: new Date(),
       },
     });
   } catch (error) {
+    // Clean up file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Scrape job description from URL
+ */
+router.post('/scrape-job-url', authenticateToken, async (req, res) => {
+  try {
+    const { jobUrl } = req.body;
+
+    if (!jobUrl) {
+      return res.status(400).json({
+        error: 'Job URL is required',
+      });
+    }
+
+    // Validate URL format
+    try {
+      new URL(jobUrl);
+    } catch (urlError) {
+      return res.status(400).json({
+        error: 'Invalid URL format. Please provide a valid job posting URL.',
+      });
+    }
+
+    const scrapeResult = await resumeTailorService.scrapeJobFromUrl(jobUrl);
+
+    if (!scrapeResult.success) {
+      return res.status(400).json({
+        error: scrapeResult.error,
+        suggestion: 'Please use LinkedIn, Indeed, or direct company career page URLs'
+      });
+    }
+
+    // Log the scraping
+    await AuditLog.create({
+      userId: req.user.id,
+      action: 'job_scrape',
+      details: {
+        jobUrl,
+        jobTitle: scrapeResult.data.title,
+        company: scrapeResult.data.company,
+        success: true
+      },
+      success: true,
+    });
+
+    res.json({
+      message: 'Job description scraped successfully',
+      jobData: scrapeResult.data,
+      jobDescription: scrapeResult.description,
+      source: 'url_scrape'
+    });
+  } catch (error) {
+    // Log failed scraping
+    await AuditLog.create({
+      userId: req.user.id,
+      action: 'job_scrape',
+      details: {
+        jobUrl: req.body.jobUrl,
+        success: false,
+        error: error.message
+      },
+      success: false,
+    });
+
+    res.status(500).json({ 
+      error: 'Failed to scrape job description',
+      details: error.message,
+      suggestion: 'Please copy and paste the job description manually if scraping fails'
+    });
   }
 });
 
@@ -187,8 +301,8 @@ router.post('/tailor', authenticateToken, checkTailoringLimit, async (req, res) 
       tailoredResumeContent: tailoredResult.content,
       tailoredResumeJson: resumeJson,
       summary: changeSummary,
-      extractedJobKeywords: jobKeywords.keywords || [],
-      matchScore: changeSummary.alignment_score || 0,
+      extractedJobKeywords: jobKeywords.keywords?.technical_terms || [],
+      matchScore: changeSummary.overall_improvements?.ats_optimization_score || changeSummary.alignment_score?.overall || 0,
       promptVariant: tailoredResult.modelUsed,
       status: 'completed',
     });
